@@ -11,10 +11,13 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class User
 {
+    public const CIVILITY_MEN = 1;
+    public const CIVILITY_WOMEN =  2;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
+     * @ORM\Column(type="uuid")
      */
     private $id;
 
@@ -63,7 +66,7 @@ class User
      */
     private $lastLoginAt;
 
-    public function getId(): ?int
+    public function getId(): string
     {
         return $this->id;
     }
