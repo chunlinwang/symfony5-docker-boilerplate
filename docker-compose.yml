@@ -1,0 +1,132 @@
+version: "3.9"  # optional since v1.27.0
+services:
+  app:
+    build:
+      context: ./docker/php
+    volumes:
+      - .:/var/app
+      - logvolume01:/var/log
+      - logvolume02:/var/app/var/log
+    depends_on:
+      - redis
+    networks:
+      - app
+
+  nginx:
+    build: ./docker/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app
+    volumes:
+      - ./:/var/app:ro
+      - ./cert:/etc/nginx/cert
+      - ./docker/nginx/conf.d/app.conf:/etc/nginx/conf.d/app.conf
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elsticData01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elastic
+
+  es02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    container_name: es02
+    environment:
+      - node.name=es02
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elsticData02:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+
+  es03:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    container_name: es03
+    environment:
+      - node.name=es03
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elsticData03:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+
+  kib01:
+    image: docker.elastic.co/kibana/kibana:7.15.0
+    container_name: kib01
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es01:9200
+      ELASTICSEARCH_HOSTS: '["http://es01:9200","http://es02:9200","http://es03:9200"]'
+    networks:
+      - elastic
+      - app
+
+  redis:
+    image: redis:6-alpine
+    volumes:
+      - redisdata:/data:delegated
+    expose:
+      - 6379
+    networks:
+      - app
+
+  postgres:
+    image: postgres:14-alpine3.14
+    restart: always
+    expose:
+      - 9200
+    environment:
+      POSTGRES_PASSWORD: sf5
+      POSTGRES_USER: sf5
+      POSTGRES_DB: sf5
+    volumes:
+      - pgdata:/var/lib/postgresql/data:delegated
+    networks:
+      - app
+
+networks:
+  app: {}
+  elastic: {}
+
+volumes:
+  logvolume01: { }
+  logvolume02: { }
+  redisdata: { }
+  pgdata: { }
+  elsticData01: {}
+  elsticData02: {}
+  elsticData03: {}
