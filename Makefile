@@ -2,6 +2,7 @@ ALL_SERVICES := ${CORE_SERVICES}
 
 COMPOSE_ALL_FILES := ${CORE_SERVICES_FILES}
 CORE_SERVICES_FILES := -f docker-compose.yml
+SERVICE=app
 
 # --------------------------
 
@@ -34,3 +35,6 @@ install: ## Install project
 
 cc: ## Clean cache
 	@docker-compose exec app bash -ic "php bin/console c:c" 
+
+cli: ## Clean cache
+	@docker-compose exec $(SERVICE) sh
